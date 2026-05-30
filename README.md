@@ -68,19 +68,23 @@ graph TD
 
     %% Conexión Ad-Hoc / P2P
     Core_A <===> |WiFi Direct / Bluetooth BLE <br> Protocolo Gossipsub| Core_B
-    ```
 ```
-    gesture
-    left to right direction
-    actor "Operador Militar" as OM
-    actor "Comandante de Unidad" as CM
 
-    rectangle "Sistema P2P Girardot" {
-        usecase "Inicializar Identidad Militar" as UC1
-        usecase "Escanear Red y Descubrir Pares" as UC2
-        usecase "Transmitir Mensaje Táctico" as UC3
-        usecase "Recibir Mensaje de Difusión" as UC4
-    }
+### 2.2. Diagrama de Casos de Uso
+Define el alcance operativo de las interacciones de los funcionarios del batallón con la red móvil.
+
+```mermaid
+flowchart LR
+    OM((" Operador Militar"))
+    CM((" Comandante de Unidad"))
+
+    subgraph Sistema ["Sistema P2P Girardot"]
+        direction TB
+        UC1([Inicializar Identidad Militar])
+        UC2([Escanear Red y Descubrir Pares])
+        UC3([Transmitir Mensaje Táctico])
+        UC4([Recibir Mensaje de Difusión])
+    end
 
     OM --> UC1
     OM --> UC2
@@ -90,9 +94,12 @@ graph TD
     CM --> UC1
     CM --> UC3
 ```
-```
 
-    sequenceDiagram
+### 2.3. Diagrama de Secuencia (Propagación de Mensaje Gossipsub)
+Muestra el flujo temporal del ciclo de vida de un mensaje de texto enviado por un emisor a través de nodos intermedios.
+
+```mermaid
+sequenceDiagram
     autonumber
     participant Op_Alfa as Operador Emisor (GIR-01)
     participant Op_Bravo as Nodo Repetidor (GIR-02)
@@ -112,9 +119,12 @@ graph TD
     Op_Charlie->>Op_Charlie: Descifra mensaje con llave criptográfica
     Op_Charlie->>Op_Charlie: Despliega texto en pantalla táctica
 ```
-```
 
-    erDiagram
+### 2.4. Modelo Entidad-Relación Lógico (Estado en Memoria)
+Dado que el sistema no posee base de datos física, este modelo representa las estructuras de datos y relaciones de los objetos JSON y colecciones indexadas que residen en la memoria RAM de cada dispositivo individual.
+
+```mermaid
+erDiagram
     NODO_MILITAR {
         string peerId PK
         string codigoMilitar UK
@@ -135,9 +145,14 @@ graph TD
     NODO_MILITAR ||--o{ MENSAJE_TACTICO : "genera o recibe"
     MENSAJE_TACTICO ||--|| HISTORICO_MEMORIA : "se registra para evitar bucles en"
 ```
-```
 
-    flowchart TD
+### 2.5. Diagramas de Flujo (Casos Específicos)
+
+#### Caso Específico A: Descubrimiento de Pares y Conexión de Red
+Muestra cómo el software maneja automáticamente la aparición de un nuevo militar en el radio de alcance de las radios (mDNS).
+
+```mermaid
+flowchart TD
     A[Inicio: Nodo Inicializado] --> B[Activar Escaneo de Red local mDNS]
     B --> C{¿Se detectó baliza de nuevo par?}
     C -- No --> D[Esperar intervalo parametrizado en .env]
@@ -149,9 +164,12 @@ graph TD
     G -- Sí --> H[Agregar canal de transmisión a la malla activa]
     H --> I[Sincronizar tabla de peers en RAM] --> B
 ```
-```
 
-    flowchart TD
+#### Caso Específico B: Control de Duplicidad de Mensajes (Evitar Saturación por Inundación)
+Algoritmo defensivo indispensable para evitar que un mensaje se retransmita indefinidamente dentro de la red mesh.
+
+```mermaid
+flowchart TD
     A[Llegada de Paquete de Datos via Gossip] --> B[Extraer ID_MENSAJE del payload JSON]
     B --> C{¿ID_MENSAJE existe en Array RAM?}
     C -- Sí --> D[Descartar paquete inmediatamente e ignorar]
@@ -161,4 +179,3 @@ graph TD
     G --> H[Retransmitir paquete a nodos vecinos conectados]
     H --> I[Fin del ciclo de procesamiento]
 ```
-
