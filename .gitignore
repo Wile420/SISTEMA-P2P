@@ -1,0 +1,45 @@
+# ==========================================
+# DEPENDENCIAS
+# ==========================================
+node_modules/
+.pnp
+.pnp.js
+
+# ==========================================
+# ENTORNO Y SECRETOS (CRÍTICO)
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# ==========================================
+# LOGS Y DEBUG
+# ==========================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# COMPILACIONES Y BUILDS (Móvil y Escritorio)
+# ==========================================
+dist/
+build/
+release/
+android/app/build/
+ios/build/
+.expo/
+
+# ==========================================
+# SISTEMA OPERATIVO Y EDITORES
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
