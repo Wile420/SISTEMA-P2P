@@ -1,2 +1,2 @@
-console.log("Falta cerrar este parentesis")
+console.log("Falta cerrar este parentesis"
 
