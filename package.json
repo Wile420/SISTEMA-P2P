@@ -1,0 +1,31 @@
+{
+  "name": "sistema-p2p",
+  "version": "1.0.0",
+  "description": "Este proyecto consiste en un sistema de comunicación militar descentralizado peer-to-peer (P2P) diseñado para operar en entornos tácticos sin infraestructura de red centralizada (Internet, servidores core o bases de datos relacionales tradicionales). El sistema permite el intercambio de mensajes de texto cifrados de extremo a extremo utilizando identificadores militares únicos.",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wile420/SISTEMA-P2P.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Wile420/SISTEMA-P2P/issues"
+  },
+  "homepage": "https://github.com/Wile420/SISTEMA-P2P#readme",
+  "devDependencies": {
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "prettier": "^3.8.3"
+  }
+}
