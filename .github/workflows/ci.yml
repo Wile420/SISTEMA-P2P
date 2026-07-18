@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      # 1) Descargar el código
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # 2) Instalar las dependencias
+      - name: Instalar dependencias
+        run: npm install
+
+      # 3) Ejecutar verificación inicial (linter)
+      - name: Ejecutar linter
+        run: npm run lint
+
+      - name: Ejecutar pruebas unitarias
+        run: npm test
+
+      - name: Verificar que la imagen Docker construye correctamente
+        run: docker build -t sicop-ag:ci .
