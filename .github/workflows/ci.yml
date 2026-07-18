@@ -1,32 +1,35 @@
-name: Integración Continua (P2P Mesh)
+name: CI
 
-# Se ejecuta automáticamente al abrir o actualizar un PR hacia main o develop
 on:
   pull_request:
-    branches:
-      - main
-      - develop
+    branches: ["main"]
+  push:
+    branches: ["main"]
 
 jobs:
-  validacion-defensiva:
-    name: Análisis Estático y Pruebas
+  build-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      - name:  Clonar el repositorio
+      # 1) Descargar el código
+      - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name:  Configurar entorno Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm' # Acelera las ejecuciones futuras
+          node-version: "20"
+          cache: "npm"
 
-      - name:  Instalar dependencias limpias
-        run: npm ci
+      # 2) Instalar las dependencias
+      - name: Instalar dependencias
+        run: npm install
 
-      - name:  Ejecutar Linter (Revisión de sintaxis)
-        run: npm run lint --if-present
+      # 3) Ejecutar verificación inicial (linter)
+      - name: Ejecutar linter
+        run: npm run lint
 
-      - name:  Ejecutar Pruebas Unitarias
-        run: npm test --if-present
+      - name: Ejecutar pruebas unitarias
+        run: npm test
+
+      - name: Verificar que la imagen Docker construye correctamente
+        run: docker build -t sicop-ag:ci .

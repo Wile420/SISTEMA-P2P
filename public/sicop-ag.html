@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SICOP-AG — Prototipo de Comunicación Táctica P2P</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a1210;
+    --bg-panel:#0f1815;
+    --bg-panel-alt:#131f1a;
+    --bg-input:#0c1512;
+    --border:#1e2f27;
+    --border-soft:#17251f;
+    --text:#d7e4d9;
+    --text-dim:#7d9186;
+    --text-faint:#4f6157;
+    --green:#4ee08a;
+    --green-dim:#2c8f5c;
+    --amber:#f2b544;
+    --cyan:#4ecbe0;
+    --red:#ef5b5b;
+    --purple:#b98cf2;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  ::selection{background:var(--green-dim);color:#fff;}
+  .app{min-height:100vh;display:flex;flex-direction:column;}
+
+  /* ---------- header ---------- */
+  .topbar{
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#0c1613,var(--bg));
+    padding:16px 22px;
+    display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between;
+  }
+  .brand{display:flex;align-items:baseline;gap:10px;}
+  .brand .mark{font-family:var(--mono);font-weight:700;letter-spacing:.14em;color:var(--green);font-size:20px;}
+  .brand .sub{font-size:12px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.03em;}
+  .stats{display:flex;gap:22px;flex-wrap:wrap;}
+  .stat{font-family:var(--mono);font-size:11px;color:var(--text-dim);text-align:right;}
+  .stat b{display:block;font-size:17px;color:var(--text);font-weight:600;}
+  .stat.warn b{color:var(--amber);}
+  .stat.ok b{color:var(--green);}
+  .infoBtn{
+    font-family:var(--mono);font-size:11px;color:var(--text-dim);background:transparent;
+    border:1px solid var(--border);padding:8px 12px;border-radius:3px;cursor:pointer;letter-spacing:.03em;
+  }
+  .infoBtn:hover{border-color:var(--green-dim);color:var(--green);}
+
+  /* ---------- layout ---------- */
+  .layout{flex:1;display:grid;grid-template-columns:270px 1fr 340px;gap:1px;background:var(--border);}
+  .roster,.console{background:var(--bg-panel);display:flex;flex-direction:column;min-height:0;}
+  .network{background:#081009;position:relative;display:flex;flex-direction:column;min-height:0;}
+
+  .panelHead{
+    padding:14px 16px 10px;border-bottom:1px solid var(--border-soft);
+    font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--text-dim);text-transform:uppercase;
+  }
+
+  /* ---------- roster ---------- */
+  .rosterList{flex:1;overflow-y:auto;padding:8px;}
+  .nodeCard{
+    border:1px solid var(--border-soft);background:var(--bg-panel-alt);border-radius:4px;
+    padding:10px 11px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;
+  }
+  .nodeCard:hover{border-color:var(--green-dim);}
+  .nodeCard.selected{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset;}
+  .nodeRow{display:flex;align-items:center;gap:8px;}
+  .roleIcon{
+    width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;font-weight:700;flex:none;
+  }
+  .role-comando .roleIcon{background:rgba(242,181,68,.15);color:var(--amber);border:1px solid var(--amber);}
+  .role-transmisiones .roleIcon{background:rgba(78,203,224,.15);color:var(--cyan);border:1px solid var(--cyan);}
+  .role-compania .roleIcon{background:rgba(78,224,138,.15);color:var(--green);border:1px solid var(--green);}
+  .role-apoyo .roleIcon{background:rgba(185,140,242,.15);color:var(--purple);border:1px solid var(--purple);}
+  .nodeName{font-family:var(--mono);font-size:13px;font-weight:600;flex:1;}
+  .statusDot{width:7px;height:7px;border-radius:50%;flex:none;}
+  .statusDot.online{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .statusDot.offline{background:var(--text-faint);}
+  .statusDot.jammed{background:var(--red);box-shadow:0 0 6px var(--red);animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:.25;}}
+  .nodeMeta{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);margin-top:5px;display:flex;justify-content:space-between;}
+  .nodeAlias{font-style:italic;}
+  .nodeActions{display:flex;gap:6px;margin-top:8px;}
+  .miniBtn{
+    flex:1;font-family:var(--mono);font-size:10px;padding:5px 4px;background:var(--bg-input);
+    border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;letter-spacing:.02em;
+  }
+  .miniBtn:hover{color:var(--text);border-color:var(--text-dim);}
+  .miniBtn.danger:hover{color:var(--red);border-color:var(--red);}
+
+  .addNodeBox{border-top:1px solid var(--border-soft);padding:12px 14px 14px;}
+  .addNodeBox select, .addNodeBox input{width:100%;margin-bottom:8px;}
+  .addNodeBox .primaryBtn{width:100%;}
+
+  /* ---------- network view ---------- */
+  .radarWrap{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+  .radarSweep{
+    position:absolute;top:50%;left:50%;width:900px;height:900px;margin:-450px 0 0 -450px;
+    background:conic-gradient(from 0deg, rgba(78,224,138,.16), transparent 32%, transparent 100%);
+    animation:spin 7s linear infinite;mix-blend-mode:screen;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .netSvgWrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:0;}
+  svg#netSvg{width:min(100%,640px);height:auto;max-height:100%;}
+  .edgeLine{stroke:#234135;stroke-width:1.4;transition:stroke .25s,stroke-width .25s;}
+  .edgeLine.active{stroke:var(--green);stroke-width:2.6;}
+  .edgeLine.brokenlink{stroke:var(--red);stroke-dasharray:4 4;}
+  .nodeDot{stroke-width:2;transition:cx .6s ease,cy .6s ease,fill .2s,stroke .2s;}
+  .nodeLabel{font-family:var(--mono);font-size:10.5px;fill:var(--text-dim);transition:x .6s ease,y .6s ease;}
+  .packet{fill:#ffffff;filter:drop-shadow(0 0 4px var(--green));}
+  .netFooter{border-top:1px solid var(--border-soft);}
+  .eventLog{
+    font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text-dim);
+    height:150px;overflow-y:auto;padding:10px 16px;
+  }
+  .eventLog div{border-bottom:1px dotted var(--border-soft);padding:3px 0;}
+  .eventLog span.tag{color:var(--green);}
+
+  .legend{display:flex;gap:14px;padding:8px 16px;font-family:var(--mono);font-size:10px;color:var(--text-dim);flex-wrap:wrap;border-top:1px solid var(--border-soft);}
+  .legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+
+  /* ---------- console ---------- */
+  .consoleBody{flex:1;overflow-y:auto;padding:14px 16px;}
+  .youAre{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:4px;}
+  .youAre b{color:var(--text);font-size:15px;}
+  .fingerprint{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-bottom:14px;}
+  label{display:block;font-family:var(--mono);font-size:10.5px;color:var(--text-dim);letter-spacing:.05em;margin:10px 0 5px;text-transform:uppercase;}
+  select,input,textarea{
+    width:100%;background:var(--bg-input);border:1px solid var(--border);color:var(--text);
+    padding:8px 9px;border-radius:3px;font-family:var(--sans);font-size:13px;
+  }
+  textarea{resize:vertical;min-height:64px;}
+  .primaryBtn{
+    margin-top:12px;width:100%;background:var(--green-dim);color:#04140b;border:none;
+    font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.04em;padding:10px;
+    border-radius:3px;cursor:pointer;text-transform:uppercase;
+  }
+  .primaryBtn:hover{background:var(--green);}
+  .primaryBtn:disabled{background:var(--border);color:var(--text-faint);cursor:not-allowed;}
+  .warnBtn{background:transparent;border:1px solid var(--red);color:var(--red);}
+  .warnBtn:hover{background:rgba(239,91,91,.12);}
+
+  .divider{border-top:1px solid var(--border-soft);margin:16px 0;}
+  .inboxItem{border:1px solid var(--border-soft);background:var(--bg-panel-alt);border-radius:4px;padding:9px 10px;margin-bottom:8px;}
+  .inboxItem .head{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-bottom:5px;}
+  .inboxItem .body{font-size:13px;}
+  .badge{font-family:var(--mono);font-size:9.5px;padding:1px 6px;border-radius:10px;border:1px solid currentColor;}
+  .empty{font-family:var(--mono);font-size:11px;color:var(--text-faint);padding:10px 0;}
+
+  /* ---------- info modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(3,8,6,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;max-width:640px;width:100%;max-height:82vh;overflow-y:auto;padding:22px 26px;}
+  .modal h2{font-family:var(--mono);color:var(--green);letter-spacing:.05em;font-size:16px;margin-top:0;}
+  .modal h3{font-family:var(--mono);font-size:12px;color:var(--amber);margin:18px 0 6px;text-transform:uppercase;letter-spacing:.06em;}
+  .modal p{font-size:13.5px;line-height:1.6;color:var(--text-dim);margin:4px 0;}
+  .modal ul{margin:6px 0;padding-left:18px;font-size:13px;color:var(--text-dim);line-height:1.7;}
+  .closeModal{float:right;background:none;border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);
+    padding:5px 10px;border-radius:3px;cursor:pointer;}
+
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .roster,.console{max-height:340px;}
+    .network{min-height:420px;}
+  }
+
+  /* ---------- login ---------- */
+  .loginOverlay{
+    position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#0e1a15,#060a08 75%);
+    display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;
+  }
+  .loginOverlay.hidden{display:none;}
+  .loginCard{
+    width:100%;max-width:380px;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:6px;padding:28px 26px;box-shadow:0 0 40px rgba(78,224,138,.06);
+  }
+  .loginCard .mark{font-family:var(--mono);font-weight:700;letter-spacing:.14em;color:var(--green);font-size:19px;margin-bottom:2px;}
+  .loginCard .sub{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:22px;}
+  .loginCard label{margin-top:0;}
+  .loginCard input{margin-bottom:6px;letter-spacing:.06em;}
+  .loginError{font-family:var(--mono);font-size:11px;color:var(--red);min-height:16px;margin:4px 0 10px;}
+  .loginHint{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:16px;line-height:1.6;border-top:1px solid var(--border-soft);padding-top:12px;}
+  .sessionBadge{font-family:var(--mono);font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:8px;}
+  .sessionBadge b{color:var(--green);}
+  .logoutBtn{
+    font-family:var(--mono);font-size:11px;color:var(--text-dim);background:transparent;
+    border:1px solid var(--border);padding:8px 12px;border-radius:3px;cursor:pointer;
+  }
+  .logoutBtn:hover{border-color:var(--red);color:var(--red);}
+</style>
+</head>
+<body>
+<div class="loginOverlay" id="loginOverlay">
+  <div class="loginCard">
+    <div class="mark">SICOP-AG</div>
+    <div class="sub">Acceso restringido — introduce tu código</div>
+    <label>Código de acceso</label>
+    <input type="password" id="loginCode" placeholder="•••••••••" autocomplete="off">
+    <div class="loginError" id="loginError"></div>
+    <button class="primaryBtn" id="btnLogin" type="button">Ingresar</button>
+    <div class="loginHint">
+      Existen dos niveles de acceso: un código para el <b style="color:var(--amber)">comandante</b>
+      (control total de la red, incluida la baja de nodos) y otro para los demás
+      <b style="color:var(--cyan)">operadores</b> (uso normal de mensajería, sin privilegios de mando).
+    </div>
+  </div>
+</div>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">SICOP-AG</div>
+      <div class="sub">Prototipo — Sistema de Comunicación Táctica Descentralizada</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="statTotal">0</b>NODOS</div>
+      <div class="stat ok"><b id="statOnline">0</b>ACTIVOS</div>
+      <div class="stat"><b id="statEdges">0</b>ENLACES</div>
+      <div class="stat"><b id="statPending">0</b>EN COLA (DTN)</div>
+      <div class="stat ok"><b id="statResilience">0%</b>RESILIENCIA</div>
+    </div>
+    <button class="infoBtn" id="btnInfo">ⓘ Acerca del prototipo</button>
+    <div class="sessionBadge">Sesión: <b id="sessionLabel">—</b></div>
+    <button class="logoutBtn" id="btnLogout">Cerrar sesión</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="roster">
+      <div class="panelHead">Nodos de la red</div>
+      <div class="rosterList" id="rosterList"></div>
+      <div class="addNodeBox">
+        <label style="margin-top:0">Añadir nodo</label>
+        <select id="newRole">
+          <option value="comando">Comando</option>
+          <option value="transmisiones">Transmisiones</option>
+          <option value="compania" selected>Compañía / Unidad</option>
+          <option value="apoyo">Apoyo</option>
+        </select>
+        <button class="primaryBtn" id="btnAddNode" type="button">+ Incorporar a la red</button>
+      </div>
+    </aside>
+
+    <main class="network">
+      <div class="radarWrap"><div class="radarSweep"></div></div>
+      <div class="netSvgWrap">
+        <svg id="netSvg" viewBox="0 0 640 640"></svg>
+      </div>
+      <div class="legend">
+        <span><b style="background:var(--green)"></b>en línea</span>
+        <span><b style="background:var(--text-faint)"></b>desconectado</span>
+        <span><b style="background:var(--red)"></b>interferido</span>
+        <span style="margin-left:auto">
+          <button class="miniBtn warnBtn" id="btnJam" style="width:auto;padding:6px 12px;">⚡ Simular guerra electrónica</button>
+        </span>
+      </div>
+      <div class="netFooter">
+        <div class="panelHead" style="border-bottom:none;padding-bottom:0;display:flex;align-items:center;justify-content:space-between;">
+          <span>Registro de eventos de red</span>
+          <button class="miniBtn" id="btnClearLog" style="flex:none;width:auto;padding:5px 10px;">limpiar</button>
+        </div>
+        <div class="eventLog" id="eventLog"></div>
+      </div>
+    </main>
+
+    <aside class="console">
+      <div class="panelHead">Consola de nodo</div>
+      <div class="consoleBody">
+        <div class="youAre">OPERANDO COMO <b id="youAreName">—</b></div>
+        <div class="fingerprint" id="youFingerprint"></div>
+
+        <label>Nodo destino</label>
+        <select id="destSelect"></select>
+        <label>Tipo de mensaje</label>
+        <select id="msgType">
+          <option value="ORDEN">ORDEN</option>
+          <option value="ALERTA">ALERTA</option>
+          <option value="REPORTE">REPORTE</option>
+          <option value="INFO">INFO</option>
+        </select>
+        <label>Contenido</label>
+        <textarea id="msgText" placeholder="Ej: avanzar a posición Norte, sector 4"></textarea>
+        <button class="primaryBtn" id="btnSend">Enviar (cifrado E2EE)</button>
+
+        <div class="divider"></div>
+        <div class="panelHead" style="padding:0 0 8px;">Bandeja recibida</div>
+        <div id="inboxList"></div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<div class="overlay" id="infoOverlay">
+  <div class="modal">
+    <button class="closeModal" id="btnCloseInfo">cerrar ✕</button>
+    <h2>ⓘ Acerca de este prototipo</h2>
+    <p>Esta es una simulación funcional que corre completamente en el navegador (sin servidor central) y demuestra,
+    con criptografía real (ECDH P-256 + AES-256-GCM vía Web Crypto API), los principios arquitectónicos de una red
+    peer-to-peer de comunicaciones tácticas descentralizadas.</p>
+
+    <h3>Funciones implementadas</h3>
+    <ul>
+      <li><b>Igualdad de nodos:</b> cualquier nodo puede operar como emisor, receptor o repetidor. Cambia de nodo en el panel izquierdo.</li>
+      <li><b>Ausencia de servidor central:</b> el enrutamiento se calcula de forma independiente sobre la topología activa; no existe una autoridad de mensajería única.</li>
+      <li><b>Descubrimiento y autoconfiguración:</b> al incorporar un nodo, este se conecta automáticamente a pares existentes; los nodos aislados se reconectan solos cada pocos segundos.</li>
+      <li><b>Enrutamiento multi-salto:</b> los mensajes viajan de nodo en nodo (ver la animación del paquete y el registro de eventos); los nodos intermedios reenvían el paquete cifrado sin poder leer su contenido.</li>
+      <li><b>Tolerancia a fallos:</b> apaga o da de baja un nodo y observa cómo la red recalcula rutas alternas automáticamente.</li>
+      <li><b>Resistencia a interferencia/DDoS:</b> el botón "Simular guerra electrónica" desconecta nodos al azar temporalmente; la red sigue operando por rutas alternas.</li>
+      <li><b>Red tolerante a retardos (DTN):</b> si no existe ruta disponible, el mensaje queda en cola y se entrega automáticamente en cuanto se restablece la conectividad.</li>
+      <li><b>Cifrado de extremo a extremo (E2EE):</b> cada mensaje se cifra con una clave derivada por ECDH exclusiva entre emisor y receptor; los repetidores nunca ven el texto plano.</li>
+      <li><b>Anonimato relativo:</b> cada nodo muestra un alias rotable, independiente de su identificador criptográfico real.</li>
+      <li><b>Autoridad de mando:</b> el acceso se separa mediante dos códigos de sesión — uno de <b>comandante</b> (control total, incluida la baja de nodos) y otro de <b>operador</b> (uso normal de mensajería, sin privilegios de mando ni acceso al nodo COMANDO-1). Cualquier intento de acción no autorizada queda registrado en el log.</li>
+    </ul>
+
+    <h3>Alcance y limitaciones</h3>
+    <p>Este prototipo simula la lógica de red (descubrimiento, enrutamiento, cifrado, tolerancia a fallos) dentro de
+    una sola página, tal como corresponde a la fase de "Diseño de la propuesta" de un proyecto factible. Para un
+    despliegue de campo real se requeriría una capa de transporte físico entre dispositivos (Wi-Fi Direct, Bluetooth
+    mesh o radio), que es un trabajo de implementación adicional sobre esta misma arquitectura lógica.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ======================================================================
+   * SICOP-AG — PROTOTIPO DE COMUNICACIÓN TÁCTICA DESCENTRALIZADA
+   * ======================================================================
+   * Simulación funcional (100% cliente, sin servidor) de una red P2P:
+   *   - CRIPTOGRAFÍA:   ECDH P-256 (Web Crypto API) para acordar una clave
+   *                      por cada par de nodos + AES-256-GCM para cifrar
+   *                      cada mensaje (E2EE real, no simulado).
+   *   - TOPOLOGÍA:      grafo de nodos (objeto `nodes`) y enlaces (`edges`),
+   *                      recalculado dinámicamente según estado online/
+   *                      offline/interferido de cada nodo.
+   *   - ENRUTAMIENTO:    BFS multi-salto sobre el grafo activo (`bfsPath`),
+   *                      sin nodo coordinador central.
+   *   - RESILIENCIA:     autodescubrimiento y autocuración (`trySelfHeal`),
+   *                      cola de mensajes DTN para reintentos (`queue`),
+   *                      simulación de interferencia (`simulateJamming`).
+   *   - CONTROL DE ACCESO: dos códigos de sesión (`ACCESS_CODES`) separan
+   *                      los privilegios de comandante y operador regular.
+   * ====================================================================== */
+
+  const MAX_NODES = 10;
+  const ACCESS_CODES = {
+    comando: 'COMANDANTE-2026',
+    operador: 'OPERADOR-2026'
+  };
+  let sessionRole = null; // 'comando' | 'operador'
+  const ROLES = {
+    comando:       { label:'Comando',       cls:'role-comando',       icon:'★' },
+    transmisiones: { label:'Transmisiones', cls:'role-transmisiones', icon:'◈' },
+    compania:      { label:'Compañía',      cls:'role-compania',      icon:'▲' },
+    apoyo:         { label:'Apoyo',         cls:'role-apoyo',         icon:'■' }
+  };
+  const CALLSIGNS = ['ALFA','BRAVO','CHARLIE','DELTA','ECO','FOXTROT','GOLF','HOTEL','INDIA','JULIET','KILO','LIMA'];
+  const ALIAS_WORDS = ['CENIZA','HALCON','SOMBRA','VIGIA','FANTASMA','TIZON','LOBO','BRUMA','ACERO','RAYO','NIEBLA','CUERVO'];
+
+  let nodes = {};       // id -> node object
+  let nodeOrder = [];   // creation order (ids)
+  let edges = [];       // {a,b}
+  let selectedNodeId = null;
+  let pendingDeleteId = null; // id del nodo con confirmación de baja pendiente (evita usar confirm() nativo, bloqueado en el sandbox del artifact)
+  let queue = [];       // pending messages (no route yet)
+  const sharedKeys = {};
+  let callsignCounters = {};
+
+  const $ = (sel) => document.querySelector(sel);
+  const svg = $('#netSvg');
+  const eventLog = $('#eventLog');
+  const rosterList = $('#rosterList');
+  const destSelect = $('#destSelect');
+  const inboxList = $('#inboxList');
+
+  // Pausa asíncrona en milisegundos, usada para ritmar las animaciones de red.
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+  // Devuelve el distintivo (callsign) legible de un nodo a partir de su id.
+  function label(id){ return nodes[id] ? nodes[id].callsign : '???'; }
+  // Convierte un ArrayBuffer (ej. clave pública) a una cadena hexadecimal, para mostrar huellas criptográficas.
+  function toHex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+  // Baraja aleatoriamente un arreglo (Fisher-Yates), usado para elegir víctimas de la interferencia simulada.
+  function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+  // Genera una clave única y estable para un enlace entre dos nodos, sin importar el orden de los ids.
+  function edgeKey(a,b){ return [a,b].sort().join('_'); }
+
+  // Escribe una entrada con marca de tiempo en el registro de eventos de red (panel inferior).
+  function logEvent(html){
+    const div = document.createElement('div');
+    const time = new Date().toLocaleTimeString('es-VE',{hour12:false});
+    div.innerHTML = `<span class="tag">[${time}]</span> ${html}`;
+    eventLog.prepend(div);
+    while(eventLog.children.length > 80) eventLog.removeChild(eventLog.lastChild);
+  }
+
+  // Genera el siguiente distintivo disponible (ej. ALFA-2) según el rol del nodo nuevo.
+  function nextCallsign(role){
+    callsignCounters[role] = (callsignCounters[role]||0) + 1;
+    const base = role === 'comando' ? 'COMANDO' : role === 'transmisiones' ? 'TRANSMISIONES' :
+                 role === 'apoyo' ? 'APOYO' : CALLSIGNS[(nodeOrder.length) % CALLSIGNS.length];
+    return `${base}-${callsignCounters[role]}`;
+  }
+  // Genera un alias/pseudónimo aleatorio y rotable, independiente de la identidad criptográfica del nodo.
+  function randomAlias(){ return ALIAS_WORDS[Math.floor(Math.random()*ALIAS_WORDS.length)] + '-' + Math.floor(10+Math.random()*89); }
+
+  // ---------------- crypto ----------------
+  // CRIPTOGRAFÍA E2EE — deriva (o recupera de caché) la clave simétrica AES-256-GCM compartida entre dos nodos mediante ECDH P-256. Es la base del cifrado extremo a extremo: los nodos intermedios nunca tienen esta clave.
+  async function getSharedKey(idA, idB){
+    const key = edgeKey(idA, idB);
+    if (sharedKeys[key]) return sharedKeys[key];
+    const derived = await crypto.subtle.deriveKey(
+      { name:'ECDH', public: nodes[idB].keyPair.publicKey },
+      nodes[idA].keyPair.privateKey,
+      { name:'AES-GCM', length:256 },
+      false,
+      ['encrypt','decrypt']
+    );
+    sharedKeys[key] = derived;
+    return derived;
+  }
+
+  // ---------------- node lifecycle ----------------
+  // Registra un enlace lógico (adyacencia) entre dos nodos si aún no existe.
+  function addEdge(a,b){
+    if (a===b) return;
+    if (edges.some(e => (e.a===a&&e.b===b)||(e.a===b&&e.b===a))) return;
+    edges.push({a,b,jammedLink:false});
+  }
+
+  // Crea un nodo nuevo: genera su par de claves ECDH, lo conecta automáticamente a pares existentes (autodescubrimiento) y recalcula el layout visual.
+  async function createNode(role){
+    if (nodeOrder.length >= MAX_NODES){ logEvent('Límite de nodos alcanzado para esta demostración.'); return; }
+    const keyPair = await crypto.subtle.generateKey({name:'ECDH', namedCurve:'P-256'}, true, ['deriveKey']);
+    const id = crypto.randomUUID();
+    const callsign = nextCallsign(role);
+    const pubRaw = await crypto.subtle.exportKey('raw', keyPair.publicKey);
+    const node = {
+      id, callsign, role, alias: randomAlias(), status:'online',
+      keyPair, fingerprint: toHex(pubRaw).slice(0,10),
+      inbox:[], x:320, y:320, jitter:{dx:(Math.random()-0.5)*18, dy:(Math.random()-0.5)*18}
+    };
+    nodes[id] = node;
+    nodeOrder.push(id);
+
+    if (nodeOrder.length > 1){
+      const prevId = nodeOrder[nodeOrder.length-2];
+      addEdge(id, prevId);
+      const others = nodeOrder.slice(0, -2).filter(n => nodes[n].status==='online');
+      if (others.length) addEdge(id, others[Math.floor(Math.random()*others.length)]);
+    }
+
+    if (!selectedNodeId) selectedNodeId = id;
+    layoutNodes();
+    renderAll();
+    logEvent(`<b>${callsign}</b> se incorpora a la red (descubrimiento automático de pares)`);
+  }
+
+  // CONTROL DE ACCESO — true solo si la sesión activa es la del comandante (código COMANDANTE-2026).
+  function isCommandAuthority(){
+    return sessionRole === 'comando';
+  }
+
+  // Intenta cambiar el nodo que se está operando; bloquea a los operadores regulares el acceso al nodo COMANDO-1.
+  function trySelectNode(id){
+    if (!nodes[id]) return;
+    if (sessionRole === 'operador' && nodes[id].callsign === 'COMANDO-1'){
+      logEvent('⛔ Acceso denegado: el nodo <b>COMANDO-1</b> está reservado para la sesión de comandante.');
+      return;
+    }
+    selectedNodeId = id;
+    renderAll();
+  }
+
+  // CONTROL DE ACCESO + BAJA DE NODO — solo el comandante puede ejecutar esto; elimina el nodo de la red de forma permanente (nodes, enlaces, cola DTN) y refresca la interfaz.
+  function removeNode(id){
+    if (!isCommandAuthority()){
+      logEvent('⛔ Acción denegada: solo <b>COMANDO-1</b> tiene autorización para dar de baja nodos.');
+      return;
+    }
+    if (id === selectedNodeId){
+      logEvent('No puedes dar de baja el nodo que estás operando actualmente.');
+      return;
+    }
+    if (!nodes[id]) return;
+    const cs = nodes[id].callsign;
+    delete nodes[id];
+    nodeOrder = nodeOrder.filter(n=>n!==id);
+    edges = edges.filter(e => e.a!==id && e.b!==id);
+    queue = queue.filter(m => m.fromId!==id && m.toId!==id);
+    if (selectedNodeId === id) selectedNodeId = nodeOrder[0] || null;
+
+    // Notifica a todos los nodos restantes: el aviso queda en su bandeja
+    // como un mensaje de sistema (no cifrado, no atribuible a un peer),
+    // igual que un aviso de red administrativo distribuido a todos los pares.
+    nodeOrder.forEach(otherId=>{
+      nodes[otherId].inbox.unshift({
+        from: null,
+        fromLabel: 'RED (SISTEMA)',
+        type: 'SISTEMA',
+        text: `El nodo ${cs} fue dado de baja de la red por orden del comando. Ya no está disponible.`,
+        time: Date.now(),
+        hops: 0
+      });
+    });
+
+    layoutNodes();
+    renderAll();
+    logEvent(`<b>${cs}</b> dado de baja de la red (nodo destruido/retirado) — notificación distribuida a los ${nodeOrder.length} nodo(s) restante(s)`);
+  }
+
+  // Apaga/reconecta un nodo (simula pérdida temporal de señal); al reconectar, reintenta las entregas pendientes.
+  function toggleOnline(id){
+    const n = nodes[id];
+    if (!n) return;
+    if (n.status === 'online'){
+      n.status = 'offline';
+      logEvent(`<b>${n.callsign}</b> se desconecta (pérdida de señal)`);
+    } else {
+      n.status = 'online';
+      logEvent(`<b>${n.callsign}</b> reconectado — reintentando entregas pendientes`);
+    }
+    renderAll();
+    attemptDeliveries();
+  }
+
+  // Regenera el alias/pseudónimo visible de un nodo (anonimato relativo).
+  function rotateAlias(id){
+    if (!nodes[id]) return;
+    nodes[id].alias = randomAlias();
+    renderAll();
+  }
+
+  // ---------------- layout ----------------
+  // Calcula la posición (x,y) de cada nodo en el diagrama SVG, distribuidos en círculo.
+  function layoutNodes(){
+    const n = nodeOrder.length;
+    const cx=320, cy=320, radius = n<=1 ? 0 : 220;
+    nodeOrder.forEach((id,i)=>{
+      const node = nodes[id];
+      const angle = (i/n) * Math.PI*2 - Math.PI/2;
+      node.x = n<=1 ? cx : cx + radius*Math.cos(angle) + node.jitter.dx;
+      node.y = n<=1 ? cy : cy + radius*Math.sin(angle) + node.jitter.dy;
+    });
+  }
+
+  // ---------------- graph / routing ----------------
+  // ENRUTAMIENTO — construye el grafo de adyacencia vigente, excluyendo nodos offline/interferidos y enlaces cortados.
+  function buildActiveGraph(){
+    const graph = {};
+    nodeOrder.forEach(id => graph[id] = []);
+    edges.forEach(e=>{
+      if (e.jammedLink) return;
+      if (!nodes[e.a] || !nodes[e.b]) return;
+      if (nodes[e.a].status!=='online' || nodes[e.b].status!=='online') return;
+      graph[e.a].push(e.b);
+      graph[e.b].push(e.a);
+    });
+    return graph;
+  }
+
+  // ENRUTAMIENTO MULTI-SALTO — búsqueda en anchura (BFS) para hallar la ruta más corta entre dos nodos sobre la topología activa.
+  function bfsPath(startId, endId, graph){
+    if (startId===endId) return [startId];
+    const visited = new Set([startId]);
+    const parent = {};
+    const q = [startId];
+    while(q.length){
+      const cur = q.shift();
+      for (const next of (graph[cur]||[])){
+        if (visited.has(next)) continue;
+        visited.add(next);
+        parent[next] = cur;
+        if (next === endId){
+          const path=[endId];
+          let c=endId;
+          while (parent[c] !== undefined){ c = parent[c]; path.unshift(c); }
+          return path;
+        }
+        q.push(next);
+      }
+    }
+    return null;
+  }
+
+  // AUTOCURACIÓN DE RED — cada pocos segundos, reconecta automáticamente a los nodos que quedaron aislados (autoconfiguración dinámica).
+  function trySelfHeal(){
+    const graph = buildActiveGraph();
+    const onlineIds = nodeOrder.filter(id=>nodes[id].status==='online');
+    onlineIds.forEach(id=>{
+      if ((graph[id]||[]).length === 0 && onlineIds.length > 1){
+        const candidates = onlineIds.filter(o=>o!==id);
+        const target = candidates[Math.floor(Math.random()*candidates.length)];
+        addEdge(id, target);
+        logEvent(`${label(id)} detecta un par cercano y se reconecta a ${label(target)} (autocuración de la red)`);
+      }
+    });
+  }
+
+  // ---------------- messaging ----------------
+  // MENSAJERÍA — cifra el mensaje (AES-256-GCM con clave derivada por ECDH) y lo envía: si hay ruta, anima la entrega multi-salto; si no, lo deja en cola DTN.
+  async function sendMessage(fromId, toId, type, text){
+    if (!text || !text.trim()) return;
+    if (fromId === toId){ logEvent('Selecciona un nodo destino diferente al emisor.'); return; }
+    const key = await getSharedKey(fromId, toId);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const enc = new TextEncoder().encode(text.trim());
+    const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc);
+    const msg = { id: crypto.randomUUID(), fromId, toId, type, iv, ciphertext, createdAt: Date.now() };
+    logEvent(`${label(fromId)} cifra un mensaje <b>${type}</b> para ${label(toId)} (AES-256-GCM, clave derivada por ECDH)`);
+    const graph = buildActiveGraph();
+    const path = bfsPath(fromId, toId, graph);
+    if (path && path.length > 1){
+      animateDelivery(msg, path);
+    } else {
+      queue.push(msg);
+      logEvent(`Sin ruta disponible hacia ${label(toId)}. Mensaje cifrado almacenado en ${label(fromId)} <i>(DTN — reintento automático)</i>`);
+    }
+    updateStats();
+  }
+
+  // DIFUSIÓN A TODOS LOS NODOS — cifra una copia independiente del mensaje por cada destinatario y las envía en paralelo (no rompe el modelo P2P por pares).
+  async function broadcastMessage(fromId, type, text){
+    const targets = nodeOrder.filter(id=>id!==fromId);
+    if (!targets.length) return;
+    logEvent(`📡 <b>${label(fromId)}</b> inicia una <b>difusión</b> de tipo ${type} hacia ${targets.length} nodo(s) — se cifra una copia independiente para cada destinatario`);
+    targets.forEach(toId => sendMessage(fromId, toId, type, text));
+  }
+
+  // Devuelve el elemento SVG <line> correspondiente a un enlace, para resaltarlo durante la animación.
+  function edgeLine(a,b){
+    return svg.querySelector(`[data-edge="${edgeKey(a,b)}"]`);
+  }
+
+  // Anima el paquete salto a salto por la ruta calculada y, al llegar, descifra el mensaje solo en el nodo destino (E2EE real).
+  async function animateDelivery(msg, path){
+    for (let i=0; i<path.length-1; i++){
+      const a = path[i], b = path[i+1];
+      const line = edgeLine(a,b);
+      if (line) line.classList.add('active');
+      await movePacket(a,b);
+      if (line) line.classList.remove('active');
+      if (i < path.length-2){
+        logEvent(`${label(b)} retransmite el paquete cifrado hacia ${label(path[i+2])} <i>(no puede leer el contenido)</i>`);
+      }
+    }
+    let plaintext = '[No se pudo descifrar]';
+    try{
+      const key = await getSharedKey(msg.fromId, msg.toId);
+      const buf = await crypto.subtle.decrypt({name:'AES-GCM', iv: msg.iv}, key, msg.ciphertext);
+      plaintext = new TextDecoder().decode(buf);
+    } catch(e){ /* destino inválido o eliminado */ }
+    if (nodes[msg.toId]){
+      nodes[msg.toId].inbox.unshift({ from: msg.fromId, fromLabel: label(msg.fromId), type: msg.type, text: plaintext, time: Date.now(), hops: path.length-1 });
+      logEvent(`<b>${label(msg.toId)}</b> descifra el mensaje de ${label(msg.fromId)} tras ${path.length-1} salto(s)`);
+      if (msg.toId === selectedNodeId) renderConsole();
+    }
+    updateStats();
+  }
+
+  // Anima un punto (paquete) desplazándose entre dos nodos del SVG usando requestAnimationFrame.
+  function movePacket(aId,bId){
+    return new Promise(resolve=>{
+      const a = nodes[aId], b = nodes[bId];
+      if (!a || !b){ resolve(); return; }
+      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('r','4.5');
+      dot.setAttribute('class','packet');
+      dot.setAttribute('cx', a.x); dot.setAttribute('cy', a.y);
+      svg.appendChild(dot);
+      const duration = 480;
+      const start = performance.now();
+      function frame(now){
+        const t = Math.min(1,(now-start)/duration);
+        dot.setAttribute('cx', a.x + (b.x-a.x)*t);
+        dot.setAttribute('cy', a.y + (b.y-a.y)*t);
+        if (t<1) requestAnimationFrame(frame);
+        else { dot.remove(); resolve(); }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  // RED TOLERANTE A RETARDOS (DTN) — reintenta periódicamente entregar los mensajes en cola cuando cambia la topología (nodo reconectado, enlace restablecido).
+  function attemptDeliveries(){
+    if (!queue.length) return;
+    const graph = buildActiveGraph();
+    const still = [];
+    queue.forEach(msg=>{
+      if (!nodes[msg.fromId] || !nodes[msg.toId]){ return; }
+      const path = bfsPath(msg.fromId, msg.toId, graph);
+      if (path && path.length>1){
+        logEvent(`Ruta restablecida: entregando mensaje en cola de ${label(msg.fromId)} a ${label(msg.toId)}`);
+        animateDelivery(msg, path);
+      } else {
+        still.push(msg);
+      }
+    });
+    queue = still;
+    updateStats();
+  }
+
+  // RESISTENCIA A INTERFERENCIA/DDoS — desconecta nodos al azar por tiempo limitado, simulando guerra electrónica, y luego los restablece.
+  function simulateJamming(){
+    const onlineIds = nodeOrder.filter(id=>nodes[id].status==='online');
+    if (onlineIds.length < 2){ logEvent('No hay suficientes nodos activos para simular interferencia.'); return; }
+    const victims = shuffle(onlineIds).slice(0, Math.min(2, Math.max(1,Math.floor(onlineIds.length/2))));
+    victims.forEach(id=> nodes[id].status = 'jammed');
+    logEvent(`⚠ <b>Guerra electrónica simulada</b>: interferencia sobre ${victims.map(label).join(', ')}`);
+    renderAll();
+    setTimeout(()=>{
+      victims.forEach(id=>{ if (nodes[id] && nodes[id].status==='jammed') nodes[id].status='online'; });
+      logEvent(`Interferencia superada. Nodos restablecidos: ${victims.map(label).join(', ')}`);
+      renderAll();
+      attemptDeliveries();
+    }, 6000);
+  }
+
+  // ---------------- rendering ----------------
+  // Vuelve a dibujar todo: mapa de red, lista de nodos, consola del nodo activo y estadísticas.
+  function renderAll(){
+    renderNetworkSVG();
+    renderRoster();
+    renderConsole();
+    updateStats();
+  }
+
+  // Dibuja los enlaces y nodos del mapa de red en el SVG, con color según rol/estado.
+  function renderNetworkSVG(){
+    svg.innerHTML = '';
+    edges.forEach(e=>{
+      if (!nodes[e.a] || !nodes[e.b]) return;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', nodes[e.a].x); line.setAttribute('y1', nodes[e.a].y);
+      line.setAttribute('x2', nodes[e.b].x); line.setAttribute('y2', nodes[e.b].y);
+      line.setAttribute('class','edgeLine' + (e.jammedLink?' brokenlink':''));
+      line.setAttribute('data-edge', edgeKey(e.a,e.b));
+      svg.appendChild(line);
+    });
+    nodeOrder.forEach(id=>{
+      const n = nodes[id];
+      const color = n.status==='online' ? {comando:'#f2b544',transmisiones:'#4ecbe0',compania:'#4ee08a',apoyo:'#b98cf2'}[n.role]
+                    : n.status==='jammed' ? '#ef5b5b' : '#4f6157';
+      const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circ.setAttribute('cx', n.x); circ.setAttribute('cy', n.y); circ.setAttribute('r', id===selectedNodeId?15:12);
+      circ.setAttribute('fill', n.status==='online' ? '#0f1815' : '#0a1210');
+      circ.setAttribute('stroke', color);
+      circ.setAttribute('class','nodeDot');
+      circ.style.cursor='pointer';
+      circ.addEventListener('click', ()=>{ trySelectNode(id); });
+      svg.appendChild(circ);
+
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', n.x); txt.setAttribute('y', n.y + 24);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('class','nodeLabel');
+      txt.textContent = n.callsign;
+      svg.appendChild(txt);
+    });
+  }
+
+  // Dibuja la lista de nodos en el panel izquierdo, aplicando el control de acceso (botón 'baja' solo visible para el comandante).
+  function renderRoster(){
+    rosterList.innerHTML = '';
+    nodeOrder.forEach(id=>{
+      const n = nodes[id];
+      const role = ROLES[n.role];
+      const canDelete = isCommandAuthority() && id !== selectedNodeId;
+      const isCommandNode = n.callsign === 'COMANDO-1';
+      const lockedForMe = isCommandNode && sessionRole === 'operador';
+      const card = document.createElement('div');
+      card.className = 'nodeCard ' + role.cls + (id===selectedNodeId?' selected':'');
+      card.innerHTML = `
+        <div class="nodeRow">
+          <div class="roleIcon">${role.icon}</div>
+          <div class="nodeName">${n.callsign}${lockedForMe?' 🔒':''}</div>
+          <div class="statusDot ${n.status==='online'?'online':n.status==='jammed'?'jammed':'offline'}" title="${n.status}"></div>
+        </div>
+        <div class="nodeMeta">
+          <span class="nodeAlias">alias: ${n.alias}</span>
+          <span>id: ${n.fingerprint}</span>
+        </div>
+        <div class="nodeActions">
+          ${lockedForMe ? '<span class="miniBtn" style="flex:2;text-align:center;color:var(--text-faint);cursor:default;">reservado al comandante</span>' : '<button class="miniBtn" data-act="use">usar</button>'}
+          <button class="miniBtn" data-act="alias">alias↻</button>
+          <button class="miniBtn" data-act="toggle">${n.status==='offline'?'reconectar':'apagar'}</button>
+          ${canDelete && pendingDeleteId!==id ? '<button class="miniBtn danger" data-act="remove" title="Dar de baja este nodo">baja</button>' : ''}
+        </div>
+        ${canDelete && pendingDeleteId===id ? `
+        <div class="nodeActions" style="margin-top:6px;">
+          <button class="miniBtn danger" data-act="confirmRemove" style="flex:2;">⚠ confirmar baja de ${n.callsign}</button>
+          <button class="miniBtn" data-act="cancelRemove">cancelar</button>
+        </div>` : ''}
+      `;
+      const useBtn = card.querySelector('[data-act="use"]');
+      if (useBtn) useBtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); trySelectNode(id); });
+      card.querySelector('[data-act="alias"]').addEventListener('click', (ev)=>{ ev.stopPropagation(); rotateAlias(id); });
+      card.querySelector('[data-act="toggle"]').addEventListener('click', (ev)=>{ ev.stopPropagation(); toggleOnline(id); });
+      const removeBtn = card.querySelector('[data-act="remove"]');
+      if (removeBtn) removeBtn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        pendingDeleteId = id;
+        renderRoster();
+      });
+      const confirmBtn = card.querySelector('[data-act="confirmRemove"]');
+      if (confirmBtn) confirmBtn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        pendingDeleteId = null;
+        removeNode(id);
+      });
+      const cancelBtn = card.querySelector('[data-act="cancelRemove"]');
+      if (cancelBtn) cancelBtn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        pendingDeleteId = null;
+        renderRoster();
+      });
+      card.addEventListener('click', ()=>{ trySelectNode(id); });
+      rosterList.appendChild(card);
+    });
+  }
+
+  // Dibuja el panel derecho: identidad del nodo activo, selector de destino/difusión y bandeja de mensajes recibidos.
+  function renderConsole(){
+    if (!selectedNodeId || !nodes[selectedNodeId]){
+      $('#youAreName').textContent = '—';
+      $('#youFingerprint').textContent = '';
+      destSelect.innerHTML = '';
+      inboxList.innerHTML = '<div class="empty">Ningún nodo seleccionado.</div>';
+      return;
+    }
+    const me = nodes[selectedNodeId];
+    $('#youAreName').textContent = `${me.callsign} (${ROLES[me.role].label})`;
+    $('#youFingerprint').textContent = `huella de clave pública: ${me.fingerprint}…  ·  alias: ${me.alias}`;
+
+    const others = nodeOrder.filter(id=>id!==selectedNodeId);
+    const broadcastOpt = others.length > 1
+      ? `<option value="__ALL__">📡 TODOS LOS NODOS (difusión, ${others.length})</option>` : '';
+    destSelect.innerHTML = broadcastOpt + others
+      .map(id=>`<option value="${id}">${nodes[id].callsign} — ${ROLES[nodes[id].role].label}</option>`).join('');
+
+    if (!me.inbox.length){
+      inboxList.innerHTML = '<div class="empty">Sin mensajes recibidos todavía.</div>';
+    } else {
+      inboxList.innerHTML = me.inbox.map(m=>{
+        const t = new Date(m.time).toLocaleTimeString('es-VE',{hour12:false});
+        return `<div class="inboxItem">
+          <div class="head"><span>${m.fromLabel || label(m.from)} · ${t}</span><span class="badge">${m.type} · ${m.hops} salto(s)</span></div>
+          <div class="body">${escapeHtml(m.text)}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Escapa caracteres HTML en el texto de los mensajes para evitar inyección al mostrarlos.
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Recalcula las métricas del encabezado: nodos totales/activos, enlaces, cola DTN y % de resiliencia de la red (alcanzabilidad BFS desde un nodo raíz).
+  function updateStats(){
+    const total = nodeOrder.length;
+    const online = nodeOrder.filter(id=>nodes[id].status==='online').length;
+    $('#statTotal').textContent = total;
+    $('#statOnline').textContent = online;
+    $('#statEdges').textContent = edges.filter(e=>!e.jammedLink).length;
+    $('#statPending').textContent = queue.length;
+
+    let resilience = 0;
+    if (online>0){
+      const graph = buildActiveGraph();
+      const root = nodeOrder.find(id=>nodes[id].status==='online');
+      if (root){
+        const visited = new Set([root]);
+        const q=[root];
+        while(q.length){ const c=q.shift(); (graph[c]||[]).forEach(nb=>{ if(!visited.has(nb)){visited.add(nb); q.push(nb);} }); }
+        resilience = Math.round((visited.size/online)*100);
+      }
+    }
+    $('#statResilience').textContent = resilience + '%';
+  }
+
+  // ---------------- events ----------------
+  // Actualiza el indicador de sesión activa (Comandante/Operador) en la barra superior.
+  function updateSessionUI(){
+    const label = $('#sessionLabel');
+    if (sessionRole === 'comando') label.textContent = 'COMANDANTE (control total)';
+    else if (sessionRole === 'operador') label.textContent = 'OPERADOR (nodo regular)';
+    else label.textContent = '—';
+  }
+
+  // CONTROL DE ACCESO — valida el código introducido contra ACCESS_CODES y abre la sesión de comandante u operador.
+  function attemptLogin(){
+    const val = ($('#loginCode').value || '').trim().toUpperCase();
+    const err = $('#loginError');
+    if (val === ACCESS_CODES.comando){
+      sessionRole = 'comando';
+    } else if (val === ACCESS_CODES.operador){
+      sessionRole = 'operador';
+      if (selectedNodeId && nodes[selectedNodeId] && nodes[selectedNodeId].callsign === 'COMANDO-1'){
+        const alt = nodeOrder.find(id => nodes[id].callsign !== 'COMANDO-1');
+        if (alt) selectedNodeId = alt;
+      }
+    } else {
+      err.textContent = 'Código inválido. Verifica con el comandante o el S-6.';
+      return;
+    }
+    err.textContent = '';
+    $('#loginCode').value = '';
+    $('#loginOverlay').classList.add('hidden');
+    updateSessionUI();
+    renderAll();
+    logEvent(`Sesión iniciada como <b>${sessionRole==='comando'?'COMANDANTE':'OPERADOR'}</b>.`);
+  }
+
+  // Cierra la sesión activa y vuelve a mostrar la pantalla de acceso, sin perder el estado de la red.
+  function logout(){
+    sessionRole = null;
+    updateSessionUI();
+    $('#loginOverlay').classList.remove('hidden');
+  }
+
+  $('#btnLogin').addEventListener('click', attemptLogin);
+  $('#loginCode').addEventListener('keydown', (e)=>{ if (e.key==='Enter') attemptLogin(); });
+  $('#btnLogout').addEventListener('click', logout);
+
+  $('#btnAddNode').addEventListener('click', ()=> createNode($('#newRole').value));
+  $('#btnJam').addEventListener('click', simulateJamming);
+  $('#btnClearLog').addEventListener('click', ()=>{ eventLog.innerHTML = ''; logEvent('Historial de red limpiado.'); });
+  $('#btnSend').addEventListener('click', ()=>{
+    const toId = destSelect.value;
+    const type = $('#msgType').value;
+    const text = $('#msgText').value;
+    if (!selectedNodeId || !toId || !text.trim()) return;
+    if (toId === '__ALL__'){
+      broadcastMessage(selectedNodeId, type, text);
+    } else {
+      sendMessage(selectedNodeId, toId, type, text);
+    }
+    $('#msgText').value = '';
+  });
+  $('#btnInfo').addEventListener('click', ()=> $('#infoOverlay').classList.add('show'));
+  $('#btnCloseInfo').addEventListener('click', ()=> $('#infoOverlay').classList.remove('show'));
+  $('#infoOverlay').addEventListener('click', (e)=>{ if (e.target.id==='infoOverlay') $('#infoOverlay').classList.remove('show'); });
+
+  setInterval(()=>{ trySelfHeal(); attemptDeliveries(); renderNetworkSVG(); updateStats(); }, 3000);
+
+  // ---------------- init ----------------
+  // Arranque de la simulación: crea los nodos iniciales (Comando, Transmisiones, Compañías, Apoyo) y renderiza la interfaz por primera vez.
+  async function init(){
+    await createNode('comando');
+    await createNode('transmisiones');
+    await createNode('compania');
+    await createNode('compania');
+    await createNode('apoyo');
+    selectedNodeId = nodeOrder[0];
+    renderAll();
+    logEvent('Red inicializada. Selecciona un nodo y envía un mensaje para ver el enrutamiento en acción.');
+  }
+  init();
+
+})();
+</script>
+</body>
+</html>
