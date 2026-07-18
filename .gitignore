@@ -1,3 +1,25 @@
+# Dependencias
+node_modules/
+npm-debug.log*
+package-lock.json.bak
+
+# Entornos y configuración local
+.env
+.env.local
+.env.*.local
+.vscode/
+.idea/
+
+# Documentación generada
+docs/
+
+# Datos locales / logs
+data/*.log
+*.log
+
+# Sistema operativo
 .DS_Store
 Thumbs.db
-node_modules/
+
+# Cobertura de pruebas
+coverage/
