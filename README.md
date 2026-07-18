@@ -24,7 +24,18 @@ desarrollado como parte de un proyecto de grado universitario.
 ## Cómo verlo
 
 Abre `index.html` directamente en cualquier navegador moderno, o publícalo
-gratis con **GitHub Pages**: *Settings → Pages → Deploy from branch → main → /(root)*.
+gratis con **GitHub Pages**.
+
+### Despliegue automático (GitHub Actions)
+
+Este repositorio incluye `.github/workflows/deploy-pages.yml`, que publica el
+sitio automáticamente en GitHub Pages cada vez que se hace push a `main`.
+Solo hace falta habilitarlo una vez:
+
+1. En GitHub: **Settings → Pages → Build and deployment → Source → GitHub Actions**.
+2. Haz push a `main` (o dispara el workflow manualmente desde la pestaña *Actions*).
+3. En unos minutos el sitio queda publicado en `https://<usuario>.github.io/SISTEMA-P2P/`.
+
 
 ## Alcance
 
