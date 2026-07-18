@@ -1,0 +1,23 @@
+{
+  "name": "sicop-ag",
+  "version": "0.3.0",
+  "description": "SICOP-AG - Sistema de Comunicacion P2P. Prototipo interactivo + backend de referencia (routing BFS, cifrado E2EE, validacion defensiva).",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/",
+    "lint": "eslint .",
+    "doc": "jsdoc -c jsdoc.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "eslint": "^9.9.0",
+    "jsdoc": "^4.0.3"
+  },
+  "license": "MIT"
+}
