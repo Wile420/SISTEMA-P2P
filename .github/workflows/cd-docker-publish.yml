@@ -1,0 +1,45 @@
+name: CD - Publicar artefacto Docker
+
+# Se activa únicamente cuando se fusiona (push) a la rama principal, es
+# decir, después de que un Pull Request fue aprobado y mergeado — nunca
+# directo, porque main está protegida y exige PR + revisión (Avance #3.2).
+on:
+  push:
+    branches: ["main"]
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Autenticarse en GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y publicar el artefacto inmutable
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # Punto de extensión: si se conecta un proveedor de hosting (Render,
+      # Railway, Fly.io, etc.) con auto-deploy desde GitHub, este paso
+      # dispara la actualización desatendida del entorno de producción.
+      # Ver README.md → sección "Despliegue en producción" para activarlo.
+      - name: Notificar despliegue (placeholder)
+        if: ${{ vars.DEPLOY_HOOK_URL != '' }}
+        run: curl -fsSL -X POST "${{ vars.DEPLOY_HOOK_URL }}"
